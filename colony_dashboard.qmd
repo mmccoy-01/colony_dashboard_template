@@ -1,5 +1,5 @@
 ---
-title: "NSG-Hc1 Colony"
+title: "Mouse Colony"
 author: "Michael McCoy"
 logo: "https://yt3.googleusercontent.com/ytc/APkrFKbprBkcDrFaaYruHcnwzSgxUJV2N0799D788ar6dQ=s900-c-k-c0x00ffffff-no-rj"
 nav-buttons:
@@ -13,15 +13,13 @@ format:
     theme:
       light: cerulean
       dark: darkly
-server: shiny
 ---
 
 ```{r Setup}
 #| context: setup
 
 pkg_list <- c(
-  "knitr", "tidyverse", "shiny", "magick", "rsvg", "DT",
-  "scales", "plotly", "survival", "survminer", "jmv"
+  "tidyverse", "DT"
 )
 
 # Function to install and load packages
@@ -49,7 +47,7 @@ load_packages(pkg_list)
 #setwd(dirname(rstudioapi::getSourceEditorContext()$path))
 ```
 
-# Room C711
+# Page
 
 ## Column
 
