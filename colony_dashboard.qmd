@@ -1,7 +1,7 @@
 ---
 title: "Mouse Colony"
 author: "Michael McCoy"
-logo: "https://yt3.googleusercontent.com/ytc/APkrFKbprBkcDrFaaYruHcnwzSgxUJV2N0799D788ar6dQ=s900-c-k-c0x00ffffff-no-rj"
+logo: "https://www.adaptivewfs.com/wp-content/uploads/2020/07/logo-placeholder-image.png"
 nav-buttons:
 - icon: github
   href: https://github.research.chop.edu/mmccoy-01?tab=repositories
