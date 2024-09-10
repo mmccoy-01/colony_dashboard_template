@@ -1,0 +1,8 @@
+status,room,cage_number,parent_cage,strain,dob,sex,num_of_mice_in_cage,mating_date,dob_litter,litter_size,wean_date,weaned,notes
+breeder,100,1,,BALB/cJ,,paired,2,2024-07-18,2024-08-09,9,2024-09-03,yes,
+breeder,100,1,,BALB/cJ,,paired,2,2024-07-18,2024-09-03,10,2024-09-30,,
+breeder,100,2,,BALB/cJ,,paired,2,2024-07-18,2024-08-12,7,2024-09-03,yes,
+breeder,100,3,,BALB/cJ,,paired,2,2024-07-18,2024-08-22,10,2024-09-18,,
+weanling,100,4,1 and 2,BALB/cJ,2024-08-09,female,5,,,,,,
+weanling,100,5,1 and 2,BALB/cJ,2024-08-09,female,5,,,,,,
+weanling,100,6,1 and 2,BALB/cJ,2024-08-09,male,5,,,,,,
