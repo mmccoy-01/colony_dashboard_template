@@ -48,7 +48,7 @@ load_packages(pkg_list)
 
 #setwd(dirname(rstudioapi::getSourceEditorContext()$path))
 # To capture manifest.json
-#rsconnect::writeManifest
+#rsconnect::writeManifest()
 
 # Calculate number of breeder cages
 breeder_cage_count <- read.csv("data/raw/raw_data.csv") %>%
