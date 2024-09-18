@@ -1,10 +1,10 @@
 ---
 title: "Mouse Colony"
 author: "Michael McCoy"
-logo: "https://www.adaptivewfs.com/wp-content/uploads/2020/07/logo-placeholder-image.png"
+logo: "https://yt3.googleusercontent.com/ytc/APkrFKbprBkcDrFaaYruHcnwzSgxUJV2N0799D788ar6dQ=s900-c-k-c0x00ffffff-no-rj"
 nav-buttons:
 - icon: github
-  href: https://github.research.chop.edu/mmccoy-01?tab=repositories
+  href: https://github.com/mmccoy-01
 - icon: linkedin
   href: https://www.linkedin.com/in/themichaelmccoy
 format: 
@@ -13,13 +13,15 @@ format:
     theme:
       light: cerulean
       dark: darkly
+server: shiny
 ---
 
 ```{r Setup}
 #| context: setup
 
 pkg_list <- c(
-  "tidyverse", "DT"
+  "knitr", "tidyverse", "shiny", "magick", "rsvg", "DT",
+  "scales", "plotly", "survival", "survminer", "jmv"
 )
 
 # Function to install and load packages
@@ -45,9 +47,19 @@ load_packages(pkg_list)
 # library(jmv) # performing statistical analyses
 
 #setwd(dirname(rstudioapi::getSourceEditorContext()$path))
+
+# Calculate number of breeder cages
+breeder_cage_count <- read.csv("data/raw/raw_data.csv") %>%
+  filter(status == "breeder") %>% 
+  summarize(unique_cages = n_distinct(cage_number))
+
+# Calculate number of colony cages
+colony_cage_count <- read.csv("data/raw/raw_data.csv") %>%
+  filter(status == "weanling") %>% 
+  summarize(unique_cages = n_distinct(cage_number))
 ```
 
-# Page
+# Room
 
 ## Column
 
@@ -63,6 +75,8 @@ raw_data <- raw_data %>% filter(status == "breeder")
 # Create an interactive DataTable
 datatable(raw_data)
 ```
+
+There are `{r} breeder_cage_count` breeder cages.
 
 ```{r Litters}
 #| title: "Litters"
@@ -92,49 +106,49 @@ raw_data %>%
 ## Column
 
 ```{r Weanlings}
-#|title: "Breeders"
+#|title: "Weanlings"
 
 # Load data
 raw_data <- read.csv("data/raw/raw_data.csv")
 
-# Select the desired columns
-raw_data <- raw_data %>% filter(status == "weanling")
+# Select the desired columns and add a weeks_old column
+raw_data <- raw_data %>%
+  filter(status == "weanling") %>%
+  mutate(weeks_old = round(as.numeric(difftime(Sys.Date(), as.Date(dob), units = "weeks")), 1)) %>% 
+  relocate(weeks_old, .after = dob)
 
 # Create an interactive DataTable
 datatable(raw_data)
 ```
 
+There are `r colony_cage_count` colony cages.
+
 ```{r Colony Mice}
 #| title: "Colony mice"
 
 # Load data
-raw_data <- read.csv("data/raw/raw_data.csv") %>%
-  filter(status == "weanling")
-
-# Calculate the difference in days between today's date and the `dob`
-today <- Sys.Date()
-
-# Convert `dob` to Date format and apply calculation
-# Also, calculate the total number of mice and the count of each sex
-# Convert `dob` to Date format and apply calculation
-# Convert `dob` to Date format and apply calculation
-raw_data %>%
+read.csv("data/raw/raw_data.csv") %>%
+  filter(status == "weanling") %>%
   mutate(dob = as.Date(dob, format = "%Y-%m-%d"),
-         days_old = as.numeric(today - dob)) %>%
+         days_old = as.numeric(Sys.Date() - dob)) %>%
   group_by(status, sex) %>%
   summarise(
     total_mice_by_sex = sum(num_of_mice_in_cage, na.rm = TRUE), 
-    avg_days_old = mean(days_old, na.rm = TRUE),  # Calculate the average days old
+    avg_days_old = mean(days_old, na.rm = TRUE),  # Calculate the average days old by sex
     .groups = "drop"
   ) %>%
-  pivot_wider(names_from = sex, values_from = total_mice_by_sex, values_fill = 0) %>%
+  summarize(
+    total_mice = sum(total_mice_by_sex, na.rm = TRUE),
+    female = sum(total_mice_by_sex[sex == "female"], na.rm = TRUE),
+    male = sum(total_mice_by_sex[sex == "male"], na.rm = TRUE),
+    weighted_avg_days_old = sum(total_mice_by_sex * avg_days_old) / total_mice,  # Weighted average of days old
+    avg_weeks_old = round(weighted_avg_days_old / 7, 1)  # Convert days to weeks and round
+  ) %>%
   mutate(
-    total_mice = coalesce(female, 0) + coalesce(male, 0),
-    avg_weeks_old = round(avg_days_old / 7, 1),  # Convert days to weeks and round to 1 decimal
     message = paste0("You have ", total_mice, 
-                     " mice (", coalesce(female, 0), " female and ", 
-                     coalesce(male, 0), " male) that are about ", avg_weeks_old, " weeks old.")
+                     " mice (", female, " female and ", male, 
+                     " male) that are about ", avg_weeks_old, " weeks old.")
   ) %>%
   pull(message) %>%
-  walk(cat, "\n")
+  cat("\n")
 ```
