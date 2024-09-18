@@ -1228,10 +1228,10 @@
       "checksum": "05bdb783ee6514c8c072e47680af8ff7"
     },
     "colony_dashboard.html": {
-      "checksum": "a466f502fa0e4746166c610d69aacc29"
+      "checksum": "76162354b0209186f6525dc4cd4d7da8"
     },
     "colony_dashboard.qmd": {
-      "checksum": "2b5f23a951ee5694cb2139dc949879fe"
+      "checksum": "ef229a5e92996eae5e5d9340ad2dbabe"
     },
     "colony_dashboard_files/libs/bootstrap/bootstrap-dark.min.css": {
       "checksum": "d440c915d9d17898a9d54fa1678092af"
@@ -1250,6 +1250,54 @@
     },
     "colony_dashboard_files/libs/clipboard/clipboard.min.js": {
       "checksum": "15f52a1ee547f2bdd46e56747332ca2d"
+    },
+    "colony_dashboard_files/libs/crosstalk-1.2.1/css/crosstalk.min.css": {
+      "checksum": "3372343a6739e49faffeb858d451558e"
+    },
+    "colony_dashboard_files/libs/crosstalk-1.2.1/js/crosstalk.js": {
+      "checksum": "0cedbe7e922170c10db55772f82139e3"
+    },
+    "colony_dashboard_files/libs/crosstalk-1.2.1/js/crosstalk.js.map": {
+      "checksum": "6f4eb7fff5f7965637440ad7be0fb877"
+    },
+    "colony_dashboard_files/libs/crosstalk-1.2.1/js/crosstalk.min.js": {
+      "checksum": "66b6e84d85256249d722c6e94143eb73"
+    },
+    "colony_dashboard_files/libs/crosstalk-1.2.1/js/crosstalk.min.js.map": {
+      "checksum": "7a0a37270ea71dee56cebc627c58ca03"
+    },
+    "colony_dashboard_files/libs/crosstalk-1.2.1/scss/crosstalk.scss": {
+      "checksum": "e5410240dcb4f51691eab5f9a62720d7"
+    },
+    "colony_dashboard_files/libs/datatables-binding-0.33/datatables.js": {
+      "checksum": "94d927c2413ab0af4fbcf0fe83bf2950"
+    },
+    "colony_dashboard_files/libs/datatables-css-0.0.0/datatables-crosstalk.css": {
+      "checksum": "d8b3c70e6451e656f1fa231e2bf97ced"
+    },
+    "colony_dashboard_files/libs/dt-core-1.13.6/css/jquery.dataTables.extra.css": {
+      "checksum": "704b5e060968ac06041f9b2d9ee545b5"
+    },
+    "colony_dashboard_files/libs/dt-core-1.13.6/css/jquery.dataTables.min.css": {
+      "checksum": "e3621690205662b3f96746d73a0fe4b2"
+    },
+    "colony_dashboard_files/libs/dt-core-1.13.6/js/jquery.dataTables.min.js": {
+      "checksum": "44e877882207ee93b9d9d17dd0e11c87"
+    },
+    "colony_dashboard_files/libs/htmltools-fill-0.5.8.1/fill.css": {
+      "checksum": "0c307b2ce7a3fa7f260a0451457c809f"
+    },
+    "colony_dashboard_files/libs/htmlwidgets-1.6.4/htmlwidgets.js": {
+      "checksum": "237f59bc086ccf24f39be55311023b91"
+    },
+    "colony_dashboard_files/libs/jquery-3.6.0/jquery-3.6.0.js": {
+      "checksum": "2849239b95f5a9a2aea3f6ed9420bb88"
+    },
+    "colony_dashboard_files/libs/jquery-3.6.0/jquery-3.6.0.min.js": {
+      "checksum": "8fb8fee4fcc3cc86ff6c724154c49c42"
+    },
+    "colony_dashboard_files/libs/jquery-3.6.0/jquery-3.6.0.min.map": {
+      "checksum": "6efc5d663aaacac2024153fa0d4bafcd"
     },
     "colony_dashboard_files/libs/quarto-dashboard/components.js": {
       "checksum": "ac49ebff39666f27f4631a3914841683"
