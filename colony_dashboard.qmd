@@ -72,13 +72,15 @@ colony_cage_count <- read.csv("data/raw/raw_data.csv") %>%
 raw_data <- read.csv("data/raw/raw_data.csv")
 
 # Select the desired columns
-raw_data <- raw_data %>% filter(status == "breeder")
+raw_data <- raw_data %>%
+  filter(status == "breeder", weaned == "") %>% 
+  arrange(cage_number)
 
 # Create an interactive DataTable
 datatable(raw_data)
 ```
 
-There are `{r} breeder_cage_count` breeder cages.
+There are `{r} breeder_cage_count` breeder cages as of `r format(Sys.Date(), "%A, %B %d, %Y")`.
 
 ```{r Litters}
 #| title: "Litters"
@@ -86,6 +88,7 @@ There are `{r} breeder_cage_count` breeder cages.
 # Load data
 raw_data <- read.csv("data/raw/raw_data.csv") %>%
   filter(status == "breeder",
+         dob_litter != "",
          weaned == ""
          )
 
@@ -95,6 +98,7 @@ today <- Sys.Date()
 
 # Convert `wean_date` to Date format and apply calculation
 raw_data %>%
+  arrange(cage_number) %>% 
   mutate(wean_date = as.Date(wean_date, format = "%Y-%m-%d"),
          days_to_wean = as.numeric(wean_date - today),
          message = paste0("Cage ", cage_number, 
@@ -123,7 +127,7 @@ raw_data <- raw_data %>%
 datatable(raw_data)
 ```
 
-There are `r colony_cage_count` colony cages.
+There are `r colony_cage_count` colony cages as of `r format(Sys.Date(), "%A, %B %d, %Y")`.
 
 ```{r Colony Mice}
 #| title: "Colony mice"
