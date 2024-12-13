@@ -1,7 +1,7 @@
 ---
-title: "Mouse Colony"
-author: "Michael McCoy"
-logo: "https://yt3.googleusercontent.com/ytc/APkrFKbprBkcDrFaaYruHcnwzSgxUJV2N0799D788ar6dQ=s900-c-k-c0x00ffffff-no-rj"
+title: "Mouse Colony Template"
+author: "author"
+logo: "https://www.anelto.com/wp-content/uploads/2021/08/placeholder-image.png"
 nav-buttons:
 - icon: github
   href: https://github.com/mmccoy-01
@@ -19,9 +19,19 @@ server: shiny
 ```{r Setup}
 #| context: setup
 
+# Do not run this code or update the renv.lock file, as it reflects the original state when the code was written and executed.
+#renv::snapshot(lockfile = "renv.lock")
+
+# Do not run this code or update the manifest.json file, as it reflects the original state when the code was written and executed.
+#rsconnect::writeManifest()
+
+# Set the working directory to the location of the current script. Use this only when running code chunks interactively, not when rendering the entire document.
+#setwd(dirname(rstudioapi::getSourceEditorContext()$path))
+
+# List of packages
 pkg_list <- c(
   "knitr", "tidyverse", "shiny", "magick", "rsvg", "DT",
-  "scales", "plotly", "survival", "survminer", "jmv"
+  "scales", "plotly", "survival", "survminer", "jmv", "igraph", "ggraph", "cli"
 )
 
 # Function to install and load packages
@@ -36,6 +46,59 @@ load_packages <- function(pkg_list) {
 
 load_packages(pkg_list)
 
+# List of current experiment file paths (pointing directly to specific CSV files)
+file_paths <- c(
+  NULL
+)
+
+# Function to read and combine specific columns from data frames
+read_and_combine_selected_data <- function(paths) {
+  # Initialize an empty data frame with the desired columns
+  combined_data <- data.frame(id = character(), 
+                               experiment = character(), 
+                               cage_number = character(), 
+                               trt = character(), 
+                               dob = character(),
+                               sex = character(),
+                               manner_of_death = character(),  
+                               stringsAsFactors = FALSE)
+  
+  # Loop through each file path
+  for (path in paths) {
+    new_data <- read.csv(path)  # Read the CSV file
+    
+    # Ensure that all relevant columns are present
+    new_data <- new_data %>%
+      mutate(across(c(id, cage_number, dob, manner_of_death), 
+                    ~ as.character(.), 
+                    .names = "{.col}"))  # Convert specified columns to character type
+
+    # Check if 'trt' exists and convert if so, otherwise fill with NA
+    if ("trt" %in% colnames(new_data)) {
+      new_data <- new_data %>%
+        mutate(trt = as.character(trt))
+    } else {
+      new_data$trt <- NA  # Fill 'trt' with NA if it doesn't exist
+    }
+    
+    # Select only the columns of interest
+    new_data_combined <- new_data %>%
+      select(id, experiment, cage_number, trt, dob, sex, manner_of_death)
+    
+    # Bind the new data frame to the combined data
+    combined_data <- bind_rows(combined_data, new_data_combined)
+  }
+  
+  return(combined_data)
+}
+
+# Combine all data using the specified columns
+raw_experiment_data <- read_and_combine_selected_data(file_paths)
+
+# Filter for unique rows by id and experiment so as to have wide data and not long data
+raw_experiment_data <- raw_experiment_data %>% 
+  distinct(id, experiment, .keep_all = TRUE)
+
 # library(knitr) # for kable table formatting
 # library(tidyverse) # tidyverse
 # library(shiny) # shiny app functionality
@@ -46,24 +109,53 @@ load_packages(pkg_list)
 # library(survminer) # for survival curves
 # library(jmv) # performing statistical analyses
 
-#setwd(dirname(rstudioapi::getSourceEditorContext()$path))
-# To capture manifest.json
-#rsconnect::writeManifest()
-
 # Calculate number of breeder cages
 breeder_cage_count <- read.csv("data/raw/raw_data.csv") %>%
-  filter(status == "breeder") %>% 
+  filter(is_active != "n",
+         status == "breeder") %>% 
   summarize(unique_cages = n_distinct(cage_number))
 
-# Calculate number of colony cages
-colony_cage_count <- read.csv("data/raw/raw_data.csv") %>%
-  filter(status == "weanling") %>% 
+# Calculate number of NSG-Hc1 colony cages
+nsghc1_colony_cage_count <- read.csv("data/raw/raw_data.csv") %>%
+  filter(is_active != "n",
+         status == "weanling",
+         strain == "NSG-Hc1") %>% 
+  summarize(unique_cages = n_distinct(cage_number))
+
+# Calculate number of NSG colony cages
+nsg_colony_cage_count <- read.csv("data/raw/raw_data.csv") %>%
+  filter(is_active != "n",
+         status == "weanling",
+         strain == "NSG") %>% 
+  summarize(unique_cages = n_distinct(cage_number))
+
+# Calculate number of experiment cages
+experiment_cage_count <- raw_experiment_data %>% 
+  filter(is.na(manner_of_death) | manner_of_death == "") %>% 
+  summarize(unique_cages = n_distinct(cage_number))
+
+# Count distinct combinations of id and experiment where manner_of_death is NA
+experiment_mice <- raw_experiment_data %>%
+  filter(is.na(manner_of_death) | manner_of_death == "") %>%
+  distinct(id, experiment) %>%
+  summarise(n_unique_mice = n())
+
+# Calculate number of expansion cages
+expansion_cage_count <- read.csv("data/raw/raw_data.csv") %>%
+  filter(is_active != "n",
+         status == "expansion") %>% 
   summarize(unique_cages = n_distinct(cage_number))
 ```
 
-# Room
+# Colony
 
 ## Column
+
+### Row
+
+#### Breeders {.tabset}
+
+##### Breeders
 
 ```{r Breeders}
 #|title: "Breeders"
@@ -73,12 +165,126 @@ raw_data <- read.csv("data/raw/raw_data.csv")
 
 # Select the desired columns
 raw_data <- raw_data %>%
-  filter(status == "breeder", weaned == "") %>% 
+  filter(is_active != "n",
+         status == "breeder",
+         weaned == "") %>% 
+  select(-status,
+         -is_active,
+         -injection_date,
+         -num_of_cells_per_mouse
+) %>% 
   arrange(cage_number)
 
 # Create an interactive DataTable
 datatable(raw_data)
 ```
+
+##### Parent-Weanling Relationship
+
+```{r Parent-Weanling Relationship}
+#|title: "Parent-Weanling Relationship"
+
+# Load the data
+raw_data <- read.csv("data/raw/raw_data.csv")
+
+# Filter for weanlings and breeders
+raw_data <- raw_data %>%
+  filter((status == "weanling" | status == "breeder") & 
+           is_active == "" & 
+           strain == "NSG-Hc1")
+
+# Filter out rows where parent_cage is NA (i.e., root of the family tree)
+edges <- raw_data %>%
+  filter(!is.na(parent_cage)) %>%
+  select(parent_cage, cage_number, sex)
+
+# Handle mixed parent_cage values (split by comma)
+edges <- edges %>%
+  separate_rows(parent_cage, sep = "\\s*,\\s*")  # Split on comma and trim spaces
+
+# Create the graph object
+graph <- graph_from_data_frame(edges, directed = TRUE)
+
+# Create a data frame with cage_number for each node
+node_cage_numbers <- unique(c(edges$parent_cage, edges$cage_number))
+node_data <- data.frame(name = node_cage_numbers, cage_number = node_cage_numbers)
+
+# Add sex information to node data
+node_data$sex <- ifelse(node_data$name %in% edges$cage_number[edges$sex == "male"], "male", "female")
+
+# Add cage_number and sex as node attributes
+V(graph)$cage_number <- node_data$cage_number[match(V(graph)$name, node_data$name)]
+V(graph)$sex <- node_data$sex[match(V(graph)$name, node_data$name)]
+
+# Get node coordinates for a tree layout
+layout <- layout_as_tree(graph)
+
+# Create a data frame for nodes with layout coordinates and sex
+node_positions <- data.frame(
+  x = layout[, 1],
+  y = layout[, 2],
+  name = V(graph)$name,
+  cage_number = V(graph)$cage_number,
+  sex = V(graph)$sex
+)
+
+# Create a data frame for edges with correct coordinates
+edge_positions <- data.frame(
+  x = node_positions$x[match(edges$parent_cage, node_positions$name)],
+  y = node_positions$y[match(edges$parent_cage, node_positions$name)],
+  xend = node_positions$x[match(edges$cage_number, node_positions$name)],
+  yend = node_positions$y[match(edges$cage_number, node_positions$name)]
+)
+
+# Define colors based on sex
+node_positions$color <- ifelse(node_positions$sex == "male", "lightblue", "lightpink")
+
+# Convert cage_number in raw_data to character type
+raw_data$cage_number <- as.character(raw_data$cage_number)
+
+# Add num_of_mice_in_cage to the node positions
+node_positions <- node_positions %>%
+  left_join(
+    raw_data %>%
+      select(cage_number, num_of_mice_in_cage), 
+    by = "cage_number"
+  )
+
+# Create the Plotly graph
+plot <- plot_ly() %>%
+  # Add edges as lines
+  add_segments(
+    data = edge_positions,
+    x = ~x, y = ~y,
+    xend = ~xend, yend = ~yend,
+    line = list(color = 'black', width = 1),
+    hoverinfo = 'none'
+  ) %>%
+  # Add nodes as markers
+  add_trace(
+    data = node_positions,
+    x = ~x, y = ~y,
+    type = 'scatter',
+    mode = 'markers+text',  # Keep 'markers+text' for both markers and text
+    text = ~cage_number,  # Only display cage_number as text on the node
+    textposition = 'top center',
+    marker = list(size = 10, color = ~color),
+    hoverinfo = "text",  # Hover shows detailed information
+    hovertext = ~paste("Cage: ", cage_number, "<br>", num_of_mice_in_cage, " mice in cage")  # Hover text with full info
+  ) %>%
+  layout(
+    title = 'Mouse Colony Family Tree',
+    xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+    yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE)
+  )
+
+# Display the plot
+plot
+```
+
+### Column
+
+#### Column
 
 There are `{r} breeder_cage_count` breeder cages as of `r format(Sys.Date(), "%A, %B %d, %Y")`.
 
@@ -87,29 +293,50 @@ There are `{r} breeder_cage_count` breeder cages as of `r format(Sys.Date(), "%A
 
 # Load data
 raw_data <- read.csv("data/raw/raw_data.csv") %>%
-  filter(status == "breeder",
+  filter(is_active != "n",
+         status == "breeder",
          dob_litter != "",
          weaned == ""
-         )
+  )
 
 # Calculate the difference in days between today's date and the `wean_date`
 today <- Sys.Date()
 
+# Function to generate a progress bar based on days_to_wean
+generate_progress_bar <- function(days_to_wean, total_days = 21) {
+  # Cap the progress bar range
+  completed_ratio <- max(0, (total_days - days_to_wean) / total_days)
+  progress_length <- 20
+  filled_length <- round(progress_length * completed_ratio)
+  empty_length <- progress_length - filled_length
+  
+  filled <- strrep("=", filled_length)
+  empty <- strrep("-", empty_length)
+  
+  paste0("[", filled, empty, "]")
+}
 
 # Convert `wean_date` to Date format and apply calculation
-raw_data %>%
+raw_data <- raw_data %>%
   arrange(cage_number) %>% 
   mutate(wean_date = as.Date(wean_date, format = "%Y-%m-%d"),
          days_to_wean = as.numeric(wean_date - today),
          message = paste0("Cage ", cage_number, 
                           " has ", litter_size, 
                           " pups ready to be weaned in ", days_to_wean, 
-                          " days on ", wean_date, ".")) %>%
-  pull(message) %>%
-  walk(cat, "\n")
+                          " days on ", wean_date, "."),
+         progress_bar = map_chr(days_to_wean, generate_progress_bar))
+
+# Print messages with progress bars using pmap and suppress output
+invisible(pmap(raw_data, function(message, progress_bar, ...) {
+  cat(message, "\n")
+  cat(progress_bar, "\n\n")
+}))
 ```
 
 ## Column
+
+### Weanlings
 
 ```{r Weanlings}
 #|title: "Weanlings"
@@ -119,42 +346,206 @@ raw_data <- read.csv("data/raw/raw_data.csv")
 
 # Select the desired columns and add a weeks_old column
 raw_data <- raw_data %>%
-  filter(status == "weanling") %>%
+  filter(is_active != "n",
+         status == "weanling"
+         ) %>%
+  select(-status,
+         -is_active,
+         -introduced_date,
+         -dob_litter,
+         -litter_size,
+         -wean_date,
+         -num_of_litters,
+         -weaned,
+         -parent_cage,
+         -injection_date,
+         -num_of_cells_per_mouse,
+         -expansion
+) %>% 
   mutate(weeks_old = round(as.numeric(difftime(Sys.Date(), as.Date(dob), units = "weeks")), 1)) %>% 
-  relocate(weeks_old, .after = dob)
+  relocate(weeks_old, .after = dob) %>% 
+  arrange(strain, cage_number)
 
 # Create an interactive DataTable
 datatable(raw_data)
 ```
 
-There are `r colony_cage_count` colony cages as of `r format(Sys.Date(), "%A, %B %d, %Y")`.
-
 ```{r Colony Mice}
 #| title: "Colony mice"
 
-# Load data
-read.csv("data/raw/raw_data.csv") %>%
-  filter(status == "weanling") %>%
+current_date <- format(Sys.Date(), "%A, %B %d, %Y")
+
+# Create first bullet point for NSG-Hc1 and NSG colony cages
+colony_message <- paste0(
+  "There are ", nsghc1_colony_cage_count, 
+  " NSG-Hc1 colony cages and ", nsg_colony_cage_count, 
+  " NSG colony cages as of ", current_date, "."
+)
+
+# NSG-Hc1 Mice Code:
+nsg_hc1_message <- read.csv("data/raw/raw_data.csv") %>%
+  filter(is_active != "n",
+         status == "weanling",
+         strain == "NSG-Hc1") %>%
   mutate(dob = as.Date(dob, format = "%Y-%m-%d"),
          days_old = as.numeric(Sys.Date() - dob)) %>%
   group_by(status, sex) %>%
   summarise(
     total_mice_by_sex = sum(num_of_mice_in_cage, na.rm = TRUE), 
-    avg_days_old = mean(days_old, na.rm = TRUE),  # Calculate the average days old by sex
+    avg_days_old = mean(days_old, na.rm = TRUE),
     .groups = "drop"
   ) %>%
   summarize(
     total_mice = sum(total_mice_by_sex, na.rm = TRUE),
     female = sum(total_mice_by_sex[sex == "female"], na.rm = TRUE),
     male = sum(total_mice_by_sex[sex == "male"], na.rm = TRUE),
-    weighted_avg_days_old = sum(total_mice_by_sex * avg_days_old) / total_mice,  # Weighted average of days old
-    avg_weeks_old = round(weighted_avg_days_old / 7, 1)  # Convert days to weeks and round
+    weighted_avg_days_old = sum(total_mice_by_sex * avg_days_old) / total_mice,
+    avg_weeks_old = round(weighted_avg_days_old / 7, 1)
   ) %>%
   mutate(
     message = paste0("You have ", total_mice, 
-                     " mice (", female, " female and ", male, 
+                     " NSG-Hc1 mice (", female, " female and ", male, 
                      " male) that are about ", avg_weeks_old, " weeks old.")
   ) %>%
-  pull(message) %>%
-  cat("\n")
+  pull(message)
+
+# NSG Mice Code:
+nsg_message <- read.csv("data/raw/raw_data.csv") %>%
+  filter(is_active != "n",
+         status == "weanling",
+         strain == "NSG") %>%
+  mutate(dob = as.Date(dob, format = "%Y-%m-%d"),
+         days_old = as.numeric(Sys.Date() - dob)) %>%
+  group_by(status, sex) %>%
+  summarise(
+    total_mice_by_sex = sum(num_of_mice_in_cage, na.rm = TRUE), 
+    avg_days_old = mean(days_old, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  summarize(
+    total_mice = sum(total_mice_by_sex, na.rm = TRUE),
+    female = sum(total_mice_by_sex[sex == "female"], na.rm = TRUE),
+    male = sum(total_mice_by_sex[sex == "male"], na.rm = TRUE),
+    weighted_avg_days_old = sum(total_mice_by_sex * avg_days_old) / total_mice,
+    avg_weeks_old = round(weighted_avg_days_old / 7, 1)
+  ) %>%
+  mutate(
+    message = paste0("You have ", total_mice, 
+                     " NSG mice (", female, " female and ", male, 
+                     " male) that are about ", avg_weeks_old, " weeks old.")
+  ) %>%
+  pull(message)
+```
+
+- `r colony_message`
+- `r nsg_hc1_message`
+- `r nsg_message`
+
+# Studies
+
+## Row
+
+There are `r experiment_cage_count` experiment cages and `r experiment_mice` mice as of `r format(Sys.Date(), "%A, %B %d, %Y")`.
+
+### Column
+
+```{r Study}
+#|title: "Study Mice"
+
+# Select the desired columns and add a weeks_old column
+raw_data <- raw_experiment_data %>%
+  mutate(weeks_old = round(as.numeric(difftime(Sys.Date(), as.Date(dob), units = "weeks")), 1)) %>% 
+  relocate(weeks_old, .after = dob)
+
+# Count distinct combinations of id and experiment where manner_of_death is NA
+experiment_mice <- raw_experiment_data %>%
+  distinct(id, experiment) %>%
+  summarise(n_unique_mice = n())
+
+# Create an interactive DataTable
+datatable(raw_data)
+```
+
+```{r Current Status by Cage and Treatment}
+#| title: "Current Status"
+#| results: asis
+
+# Extract unique experiments
+unique_experiments <- unique(raw_experiment_data$experiment)
+
+# Loop through each unique experiment and create plots
+for (exp in unique_experiments) {
+  scatterplot <- raw_experiment_data %>%
+    # Check if 'trt' column exists, if not create it with default value "Unknown"
+    {if (!"trt" %in% names(.)) mutate(., trt = "Unknown") else .} %>%
+    arrange(manner_of_death) %>%  # Arrange data to ensure NA is at the end
+    distinct(trt, id, experiment, .keep_all = TRUE) %>%  # Ensure uniqueness by experiment
+    # Replace missing trt values with "Unknown"
+    mutate(trt = ifelse(is.na(trt) | trt == "", "Unknown", trt)) %>%
+    # Ensure id is numeric (if it should be), otherwise, use factor levels to reorder
+    mutate(id_numeric = as.numeric(id)) %>%  # Create a numeric version of id
+    filter(experiment == exp) %>%  # Filter data for the current experiment
+    ggplot(aes(x = factor(cage_number), y = reorder(trt, id_numeric, na.rm = TRUE))) +  # Reorder using numeric id
+    geom_point(
+      aes(color = factor(ifelse(is.na(manner_of_death) | manner_of_death == "", "Alive", "Dead"))),
+      size = 3,
+      position = position_dodge2(width = 0.5),
+      alpha = 0.7
+    ) +
+    geom_text(
+      aes(label = as.character(id), color = factor(ifelse(is.na(manner_of_death) | manner_of_death == "", "Alive", "Dead"))),
+      position = position_dodge2(width = 0.5),
+      vjust = -1,
+      size = 3
+    ) +
+    scale_color_manual(
+      values = c("Dead" = "red", "Alive" = "green"),
+      guide = guide_legend(title = "Status")
+    ) +
+    labs(x = "Cage Number", y = "Treatment", color = "Status") +
+    theme_minimal() +
+    theme(legend.position = "top", 
+          axis.text.x = element_text(size = 12, margin = margin(0, 40, 0, 40))) +
+    guides(color = "none") +
+    scale_x_discrete(breaks = unique(raw_experiment_data$cage_number)) +
+    ggtitle(paste("Scatterplot for Experiment:", exp))  # Title for the plot
+
+  # Print the scatterplot for the current experiment
+  print(scatterplot)
+}
+```
+
+# Expansions
+
+## Column
+
+There are `{r} expansion_cage_count` expansion cages as of `r format(Sys.Date(), "%A, %B %d, %Y")`.
+
+```{r Expansions}
+#|title: "Expansions"
+
+# Load data
+raw_data <- read.csv("data/raw/raw_data.csv")
+
+# Select the desired columns
+raw_data <- raw_data %>%
+  filter(is_active != "n",
+         status == "expansion") %>% 
+  select(-status,
+         -is_active,
+         -introduced_date,
+         -dob_litter,
+         -litter_size,
+         -wean_date,
+         -weaned,
+         -parent_cage) %>% 
+  mutate(weeks_old = round(as.numeric(difftime(Sys.Date(), as.Date(dob), units = "weeks")), 1),
+         days_since_injection = round(as.numeric(difftime(Sys.Date(), as.Date(injection_date), units = "days")), 1),
+         num_of_cells_per_mouse = formatC(num_of_cells_per_mouse, format = "e", digits = 2)
+         ) %>% 
+  relocate(weeks_old, .after = dob) %>% 
+  arrange(cage_number)
+
+# Create an interactive DataTable
+datatable(raw_data)
 ```
