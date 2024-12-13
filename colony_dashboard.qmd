@@ -160,6 +160,10 @@ expansion_cage_count <- read.csv("data/raw/raw_data.csv") %>%
 ```{r Breeders}
 #|title: "Breeders"
 
+# An optimal age for pairing a sire and a dam is:
+# Sire: 8 to 12 weeks old; Retire at 52 weeks
+# Dam: 8 to 10 weeks old; Retire at 6-8 months or about 26 to 35 weeks
+
 # Load data
 raw_data <- read.csv("data/raw/raw_data.csv")
 
@@ -170,10 +174,42 @@ raw_data <- raw_data %>%
          weaned == "") %>% 
   select(-status,
          -is_active,
+         -sex,
+         -room,
+         -strain,
+         -num_of_mice_in_cage,
+         -weaned,
+         -parent_cage,
+         -notes,
+         -expansion,
          -injection_date,
-         -num_of_cells_per_mouse
-) %>% 
+         -num_of_cells_per_mouse) %>% 
   arrange(cage_number)
+
+raw_data <- raw_data %>%
+  mutate(
+    # Split dob into sire and dam dob
+    sire_dob = sapply(strsplit(as.character(raw_data$dob), ","), `[`, 1),
+    dam_dob = sapply(strsplit(as.character(raw_data$dob), ","), `[`, 2),
+    
+    # Convert to Date format using ymd (for "YYYY-MM-DD" format)
+    sire_dob = ymd(sire_dob),
+    dam_dob = ymd(dam_dob),
+    
+    # Calculate weeks old or set to 'unknown' if dob is missing
+    weeks_old = case_when(
+      is.na(sire_dob) | is.na(dam_dob) ~ "unknown",
+      TRUE ~ paste(
+        floor(difftime(Sys.Date(), sire_dob, units = "weeks")),
+        floor(difftime(Sys.Date(), dam_dob, units = "weeks")),
+        sep = ", "
+      )
+    )
+  ) %>% 
+  select(weeks_old, everything(),
+         -dob,
+         -sire_dob,
+         -dam_dob)
 
 # Create an interactive DataTable
 datatable(raw_data)
@@ -239,10 +275,11 @@ edge_positions <- data.frame(
 # Define colors based on sex
 node_positions$color <- ifelse(node_positions$sex == "male", "lightblue", "lightpink")
 
-# Convert cage_number in raw_data to character type
-raw_data$cage_number <- as.character(raw_data$cage_number)
+# Convert both cage_number columns to character and trim spaces
+node_positions$cage_number <- as.character(trimws(node_positions$cage_number))
+raw_data$cage_number <- as.character(trimws(raw_data$cage_number))
 
-# Add num_of_mice_in_cage to the node positions
+# Perform the left join
 node_positions <- node_positions %>%
   left_join(
     raw_data %>%
