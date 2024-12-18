@@ -223,11 +223,12 @@ datatable(raw_data)
 # Load the data
 raw_data <- read.csv("data/raw/raw_data.csv")
 
-# Filter for weanlings and breeders
+# Filter for weanlings and breeders and add weeks_old
 raw_data <- raw_data %>%
   filter((status == "weanling" | status == "breeder") & 
            is_active == "" & 
-           strain == "NSG-Hc1")
+           strain == "NSG-Hc1") %>% 
+  mutate(weeks_old = round(as.numeric(difftime(Sys.Date(), as.Date(dob), units = "weeks")), 1))
 
 # Filter out rows where parent_cage is NA (i.e., root of the family tree)
 edges <- raw_data %>%
@@ -279,11 +280,11 @@ node_positions$color <- ifelse(node_positions$sex == "male", "lightblue", "light
 node_positions$cage_number <- as.character(trimws(node_positions$cage_number))
 raw_data$cage_number <- as.character(trimws(raw_data$cage_number))
 
-# Perform the left join
+# Perform the left join to include num_of_mice_in_cage and weeks_old
 node_positions <- node_positions %>%
   left_join(
     raw_data %>%
-      select(cage_number, num_of_mice_in_cage), 
+      select(cage_number, num_of_mice_in_cage, weeks_old), 
     by = "cage_number"
   )
 
@@ -302,12 +303,16 @@ plot <- plot_ly() %>%
     data = node_positions,
     x = ~x, y = ~y,
     type = 'scatter',
-    mode = 'markers+text',  # Keep 'markers+text' for both markers and text
-    text = ~cage_number,  # Only display cage_number as text on the node
+    mode = 'markers+text',
+    text = ~cage_number,
     textposition = 'top center',
     marker = list(size = 10, color = ~color),
-    hoverinfo = "text",  # Hover shows detailed information
-    hovertext = ~paste("Cage: ", cage_number, "<br>", num_of_mice_in_cage, " mice in cage")  # Hover text with full info
+    hoverinfo = "text",
+    hovertext = ~paste(
+      "Cage: ", cage_number, "<br>",
+      num_of_mice_in_cage, " mice in cage<br>",
+      "Weeks old: ", weeks_old
+    )
   ) %>%
   layout(
     title = 'Mouse Colony Family Tree',
