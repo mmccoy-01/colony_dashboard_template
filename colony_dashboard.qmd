@@ -13,7 +13,6 @@ format:
     theme:
       light: cerulean
       dark: darkly
-server: shiny
 ---
 
 ```{r Setup}
