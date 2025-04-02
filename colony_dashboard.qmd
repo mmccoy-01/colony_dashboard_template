@@ -1,10 +1,10 @@
 ---
-title: "Mouse Colony Template"
-author: "author"
-logo: "https://www.anelto.com/wp-content/uploads/2021/08/placeholder-image.png"
+title: "Colony Mice"
+author: "Michael McCoy"
+logo: "https://yt3.googleusercontent.com/ytc/APkrFKbprBkcDrFaaYruHcnwzSgxUJV2N0799D788ar6dQ=s900-c-k-c0x00ffffff-no-rj"
 nav-buttons:
 - icon: github
-  href: https://github.com/mmccoy-01
+  href: https://github.research.chop.edu/mmccoy-01?tab=repositories
 - icon: linkedin
   href: https://www.linkedin.com/in/themichaelmccoy
 format: 
@@ -19,14 +19,14 @@ server: shiny
 ```{r Setup}
 #| context: setup
 
+# Set the working directory to the location of the current script. Use this only when running code chunks interactively, not when rendering the entire document.
+#setwd(dirname(rstudioapi::getSourceEditorContext()$path))
+
 # Do not run this code or update the renv.lock file, as it reflects the original state when the code was written and executed.
 #renv::snapshot(lockfile = "renv.lock")
 
 # Do not run this code or update the manifest.json file, as it reflects the original state when the code was written and executed.
 #rsconnect::writeManifest()
-
-# Set the working directory to the location of the current script. Use this only when running code chunks interactively, not when rendering the entire document.
-#setwd(dirname(rstudioapi::getSourceEditorContext()$path))
 
 # List of packages
 pkg_list <- c(
@@ -48,7 +48,6 @@ load_packages(pkg_list)
 
 # List of current experiment file paths (pointing directly to specific CSV files)
 file_paths <- c(
-  NULL
 )
 
 # Function to read and combine specific columns from data frames
@@ -98,16 +97,6 @@ raw_experiment_data <- read_and_combine_selected_data(file_paths)
 # Filter for unique rows by id and experiment so as to have wide data and not long data
 raw_experiment_data <- raw_experiment_data %>% 
   distinct(id, experiment, .keep_all = TRUE)
-
-# library(knitr) # for kable table formatting
-# library(tidyverse) # tidyverse
-# library(shiny) # shiny app functionality
-# library(DT) # for rendering tables
-# library(scales) # scale functions for customizing visualizations
-# library(plotly) # interactive cursor friendly plots
-# library(survival) # for survival curves
-# library(survminer) # for survival curves
-# library(jmv) # performing statistical analyses
 
 # Calculate number of breeder cages
 breeder_cage_count <- read.csv("data/raw/raw_data.csv") %>%
@@ -163,6 +152,28 @@ expansion_cage_count <- read.csv("data/raw/raw_data.csv") %>%
 # An optimal age for pairing a sire and a dam is:
 # Sire: 8 to 12 weeks old; Retire at 52 weeks
 # Dam: 8 to 10 weeks old; Retire at 6-8 months or about 26 to 35 weeks
+
+# Load data
+raw_data <- read.csv("data/raw/raw_data.csv")
+
+# Select the desired columns
+raw_data <- raw_data %>%
+  filter(is_active != "n",
+         status == "breeder",
+         weaned == "") %>% 
+  select(-status,
+         -is_active,
+         -sex,
+         -room,
+         -strain,
+         -num_of_mice_in_cage,
+         -weaned,
+         -parent_cage,
+         -notes,
+         -expansion,
+         -injection_date,
+         -num_of_cells_per_mouse) %>% 
+  arrange(cage_number)
 
 raw_data <- raw_data %>%
   mutate(
@@ -326,8 +337,13 @@ today <- Sys.Date()
 
 # Function to generate a progress bar based on days_to_wean
 generate_progress_bar <- function(days_to_wean, total_days = 21) {
+  # Handle cases where days_to_wean is negative
+  if (days_to_wean < 0) {
+    return("[====================] (Wean date passed)")
+  }
+  
   # Cap the progress bar range
-  completed_ratio <- max(0, (total_days - days_to_wean) / total_days)
+  completed_ratio <- max(0, min(1, (total_days - days_to_wean) / total_days))
   progress_length <- 20
   filled_length <- round(progress_length * completed_ratio)
   empty_length <- progress_length - filled_length
@@ -343,10 +359,14 @@ raw_data <- raw_data %>%
   arrange(cage_number) %>% 
   mutate(wean_date = as.Date(wean_date, format = "%Y-%m-%d"),
          days_to_wean = as.numeric(wean_date - today),
-         message = paste0("Cage ", cage_number, 
-                          " has ", litter_size, 
-                          " pups ready to be weaned in ", days_to_wean, 
-                          " days on ", wean_date, "."),
+         message = ifelse(days_to_wean < 0,
+                          paste0("Cage ", cage_number, 
+                                 " has ", litter_size, 
+                                 " pups that should have been weaned by ", wean_date, "."),
+                          paste0("Cage ", cage_number, 
+                                 " has ", litter_size, 
+                                 " pups ready to be weaned in ", days_to_wean, 
+                                 " days on ", wean_date, ".")),
          progress_bar = map_chr(days_to_wean, generate_progress_bar))
 
 # Print messages with progress bars using pmap and suppress output
@@ -389,7 +409,15 @@ raw_data <- raw_data %>%
   arrange(strain, cage_number)
 
 # Create an interactive DataTable
-datatable(raw_data)
+datatable(raw_data, 
+          extensions = 'Buttons',
+          options = list(
+            pageLength = 20,
+            scrollX = TRUE,
+            dom = 'Bfrtip',  # Buttons at the top
+            buttons = c('csv')  # CSV download button
+          )
+)
 ```
 
 ```{r Colony Mice}
@@ -558,6 +586,7 @@ raw_data <- raw_data %>%
          -introduced_date,
          -dob_litter,
          -litter_size,
+         -num_of_litters,
          -wean_date,
          -weaned,
          -parent_cage) %>% 
@@ -569,5 +598,78 @@ raw_data <- raw_data %>%
   arrange(cage_number)
 
 # Create an interactive DataTable
-datatable(raw_data)
+datatable(raw_data, 
+          extensions = 'Buttons',
+          options = list(
+            pageLength = 20,
+            scrollX = TRUE,
+            dom = 'Bfrtip',  # Buttons at the top
+            buttons = c('csv')  # CSV download button
+          )
+)
+```
+
+
+# CAGE CARD GENERATION TEST CODE
+
+```{r CAGE CARD GENERATION TEST CODE}
+#| eval: false
+
+# Load necessary libraries
+library(ggplot2)
+library(gridExtra)
+library(qrcode)
+library(baRcodeR)
+library(grid)
+library(magick)
+
+# Example data
+cage_data <- data.frame(
+  mouse_id = 1:5,
+  cage_number = rep("Cage 101", 5),
+  mouse_line = rep("Line A", 5),
+  strain = rep("NSG | 005557", 5),
+  sex = c("M", "F", "M", "M", "F"),
+  generation = rep("F1", 5),
+  PI = rep("Grupp", 5),
+  technician = rep("Michael", 5),
+  phone = rep("(610) 909-8680", 5),
+  born = c("2024-01-10", "2024-01-15", "2024-01-20", "2024-01-25", "2024-02-01"),
+  genotype = rep("WT", 5),
+  gene = rep("GeneX", 5),
+  additional_notes = rep("No issues", 5)
+)
+
+# Remove duplicate cage_number rows (ensure only one card per cage_number)
+cage_data_unique <- cage_data[!duplicated(cage_data$cage_number), ]
+
+# Function to create each cage card without QR code
+generate_cage_card <- function(data_row) {
+  ggplot() +
+    geom_text(aes(x = 0, y = 5.5), label = paste("Cage:", data_row$cage_number), hjust = 0, size = 5) +
+    geom_text(aes(x = 0, y = 5), label = paste("Mouse Line:", data_row$mouse_line), hjust = 0, size = 4) +
+    geom_text(aes(x = 0, y = 4.5), label = paste("Strain:", data_row$strain), hjust = 0, size = 4) +
+    geom_text(aes(x = 0, y = 4), label = paste("Sex:", data_row$sex), hjust = 0, size = 4) +
+    geom_text(aes(x = 0, y = 3.5), label = paste("Generation:", data_row$generation), hjust = 0, size = 4) +
+    geom_text(aes(x = 0, y = 3), label = paste("PI:", data_row$PI), hjust = 0, size = 4) +
+    geom_text(aes(x = 0, y = 2.5), label = paste("Technician:", data_row$technician), hjust = 0, size = 4) +
+    geom_text(aes(x = 0, y = 2), label = paste("Phone:", data_row$phone), hjust = 0, size = 4) +
+    
+    # Blue Circle Sticker
+    annotate("point", x = 11, y = 5, color = "blue", size = 8) +
+    
+    # Aesthetic adjustments
+    theme_void() +
+    theme(plot.margin = margin(1, 1, 1, 1, "cm"))
+}
+
+# Generate cage card for each unique cage number
+cage_cards <- lapply(seq_len(nrow(cage_data_unique)), function(i) {
+  generate_cage_card(cage_data_unique[i, ])
+})
+
+# Set the dimensions of the cage card (12.6 cm L by 6 cm H)
+pdf("Cage_Cards.pdf", width = 12.6 / 2.54, height = 6 / 2.54)  # Convert cm to inches
+do.call(grid.arrange, c(cage_cards, ncol = 1))  # Arrange one card per page
+dev.off()
 ```
